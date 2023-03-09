@@ -5,6 +5,10 @@ using UnityEngine;
 
 public class VegetationGenerator : MonoBehaviour
 {
+    /// <summary>
+    /// Class used for procedural generation of vegetation onto terrain
+    /// Used for triangulating terrain - enables calculation of normals (used for determining steepnes of a surface)
+    /// </summary>
     [Header ("Parent object")]
     public Transform terrainObject;
 
