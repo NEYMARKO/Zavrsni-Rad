@@ -8,11 +8,14 @@ public class MapGeneratorUI : Editor
     {
         MapGenerator mapGenerator = (MapGenerator) target;
 
-        DrawDefaultInspector();
-
-        if (GUILayout.Button("Generate Noise Map"))
+        if (DrawDefaultInspector())
         {
             mapGenerator.generateNoiseMap();
         }
+
+        /*if (GUILayout.Button("Generate Noise Map"))
+        {
+            mapGenerator.generateNoiseMap();
+        }*/
     }
 }
