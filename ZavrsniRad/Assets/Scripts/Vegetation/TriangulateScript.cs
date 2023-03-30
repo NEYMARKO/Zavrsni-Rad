@@ -9,12 +9,12 @@ public class TriangulateScript : MonoBehaviour
     public Terrain terrain;
     private int trianglesInTerrain;
     private float[] steepnessArray;
-    private float[] triangleCentroidPositionArray;
+    private Vector2[] triangleCentroidPositionArray;
     // Start is called before the first frame update
     private void Awake()
     {
         trianglesInTerrain = (int)(terrain.terrainData.size.x - 1) * (int)(terrain.terrainData.size.z - 1) * 2;
-        triangleCentroidPositionArray = new float[trianglesInTerrain];
+        triangleCentroidPositionArray = new Vector2[trianglesInTerrain];
     }
     void Start()
     {
@@ -45,15 +45,16 @@ public class TriangulateScript : MonoBehaviour
 
     private void setCentroidPositionArray(int i, int j)
     {
-        triangleCentroidPositionArray[j * i * 2] = (3 * i + 1) / (3f * terrain.terrainData.size.x);
-        triangleCentroidPositionArray[j * i * 2 + 1] = (3 * i + 2) / (3f * terrain.terrainData.size.x);
+        triangleCentroidPositionArray[j * i * 2] = new Vector2((3 * i + 1) / (3f * terrain.terrainData.size.x), (3 * j + 1) / (3f * terrain.terrainData.size.z));
+        triangleCentroidPositionArray[j * i * 2 + 1] = new Vector2((3 * i + 2) / (3f * terrain.terrainData.size.x), (3 * j + 2) / (3f * terrain.terrainData.size.z));
     }
     public float[] getSteepnessArray()
     {
         return steepnessArray;
     }
 
-    public float[] getCentroidPositionArray()
+    //podaci se spremaju u Vector2 jer su Tuple (trebaju mi 2 vrijednosti)
+    public Vector2[] getCentroidPositionArray()
     {
         return triangleCentroidPositionArray;
     }
