@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEditor;
+using Unity.VisualScripting.FullSerializer;
 
 public class ProceduralGenerationWindow : EditorWindow
 {
@@ -36,22 +37,22 @@ public class ProceduralGenerationWindow : EditorWindow
 
         if (GUILayout.Button("Generate Vegetation"))
         {
-            Debug.Log("ACTIVE TERRAIN: ", Terrain.activeTerrain.terrainData);
             GenerateVegetation(Terrain.activeTerrain, noiseMapTexture);
         }
     }
     private void GenerateVegetation(Terrain terrain, Texture2D noiseMapTexture)
     {
         Transform parent = new GameObject("Vegetation").transform;
+        Debug.Log("TERRAIN DIMENSIONS: " + terrain.terrainData.size.x + " x " + terrain.terrainData.size.z);
         for (int x = 0; x < terrain.terrainData.size.x; x++)
         {
-            for (int z = 0; z < terrain.terrainData.size.y; z++)
+            for (int z = 0; z < terrain.terrainData.size.z; z++)
             {
                 float noiseMapValue = noiseMapTexture.GetPixel(x, z).g;
                 if (noiseMapValue > 0.5)
                 {
                     Vector3 position = new Vector3(x, 0, z);
-                    position.y = terrain.terrainData.GetInterpolatedHeight(x / (float) terrain.terrainData.size.x, z / (float) terrain.terrainData.size.y);
+                    position.y = terrain.terrainData.GetInterpolatedHeight(x / (float) terrain.terrainData.size.x, z / (float) terrain.terrainData.size.z);
                     GameObject plantToSpawn = Instantiate(objectToSpawn, position, Quaternion.identity);
                     plantToSpawn.transform.SetParent(parent);
                 }
