@@ -24,7 +24,7 @@ public class MapGenerator : MonoBehaviour
         drawMap = GetComponent<DrawMap>();
         noiseGenerator = GetComponent<NoiseGenerator>();
     } 
-    public Texture2D generateNoiseMap()
+    public Texture2D generateNoiseMap(float scale, float horizontalScroll, float verticalScroll)
     {
         float[,] noiseMap = noiseGenerator.makeNoiseMap(drawMap.getWidth(), drawMap.getHeight(), scale , horizontalScroll, verticalScroll, density);
         Texture2D texture = drawMap.drawNoiseMap(noiseMap);
