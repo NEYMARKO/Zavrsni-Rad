@@ -559,7 +559,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!23 &446456467
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -697,13 +697,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 058cdd5aa88cfc147b895ae751d9d056, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  scale: 0.8
+  scale: 3.58
   frequency: 8.49
   density: 2.5
   verticalScroll: 0.06
   horizontalScroll: -1.7
-  drawMap: {fileID: 569761778}
-  noiseGenerator: {fileID: 569761779}
 --- !u!1 &1156076827
 GameObject:
   m_ObjectHideFlags: 0

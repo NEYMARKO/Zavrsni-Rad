@@ -26,7 +26,7 @@ public class ProceduralGenerationWindow : EditorWindow
 
         horizontalScroll = EditorGUILayout.Slider("Horizontal Scroll", horizontalScroll, -100f, 100f);
         verticalScroll = EditorGUILayout.Slider("Vertical Scroll", verticalScroll, -100f, 100f);
-        scale = EditorGUILayout.Slider("Scale", scale, 0.1f, 10f);
+        scale = EditorGUILayout.Slider("Scale", scale, 0.1f, 20f);
 
         if (GUILayout.Button("Generate noiseMap"))
         {
@@ -48,7 +48,7 @@ public class ProceduralGenerationWindow : EditorWindow
             for (int z = 0; z < terrain.terrainData.size.y; z++)
             {
                 float noiseMapValue = noiseMapTexture.GetPixel(x, z).g;
-                if (noiseMapValue > 0)
+                if (noiseMapValue > 0.5)
                 {
                     Vector3 position = new Vector3(x, 0, z);
                     position.y = terrain.terrainData.GetInterpolatedHeight(x / (float) terrain.terrainData.size.x, z / (float) terrain.terrainData.size.y);
