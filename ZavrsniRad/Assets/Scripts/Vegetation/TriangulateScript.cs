@@ -19,9 +19,18 @@ public class TriangulateScript : MonoBehaviour
     void Start()
     {
         steepnessArray = Triangulate();
-        Debug.Log(steepnessArray.Length);
+        //Debug.Log(steepnessArray.Length);
+        //ovo srusi editor
+        /*foreach (Vector2 v in triangleCentroidPositionArray)
+        {
+            Debug.Log("v: " + v);
+        }*/
+        for (int i = 0; i < 1000; i++)
+        {
+            Debug.Log(triangleCentroidPositionArray[100000 + i]); 
+        }
     }
-    
+
     private float[] Triangulate()
     {
         float[] steepness = new float[trianglesInTerrain];   //no. of tris = (no. of points - 1)^2 * 2- dobiveno na papiru

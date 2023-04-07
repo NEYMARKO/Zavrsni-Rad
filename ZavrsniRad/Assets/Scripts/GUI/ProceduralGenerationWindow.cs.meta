@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 88261a8408fcc1b4c9cc50dc7ee5a226
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - m_ViewDataDictionary: {instanceID: 0}
+  - objectToSpawn: {fileID: 6043957066544772378, guid: 5b38a73ae4e241d4aaa3d743044ecdfb,
+      type: 3}
+  - mapGeneratorObject: {fileID: 7609192238376316194, guid: 3f5292aef1fa0494f8a553306f47a30b,
+      type: 3}
+  - terrain: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

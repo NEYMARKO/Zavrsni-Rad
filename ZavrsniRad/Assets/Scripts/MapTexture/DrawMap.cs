@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class DrawMap : MonoBehaviour
@@ -9,7 +7,7 @@ public class DrawMap : MonoBehaviour
 
     private int width;
     private int height;
-    public void drawNoiseMap(float[,] noiseMap)
+    public Texture2D drawNoiseMap(float[,] noiseMap)
     {
         //dividing by 10 because plane dimensions are by default 10x10
         //if s is applied to the plane, it will be 10 times bigger than terrain
@@ -18,6 +16,8 @@ public class DrawMap : MonoBehaviour
 
         Texture2D texture = new Texture2D(width, height);
 
+        Debug.Log("Width: " + width);
+        Debug.Log("Height: " + height);
         Color[] colors = new Color[width * height]; 
         for (int y = 0; y < height; y++)
         {
@@ -31,6 +31,8 @@ public class DrawMap : MonoBehaviour
 
         planeTextureRenderer.sharedMaterial.mainTexture = texture;
         planeTextureRenderer.transform.localScale = new Vector3(width, 1, height);
+
+        return texture;
     }
 
     public int getWidth()

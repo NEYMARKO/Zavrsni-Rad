@@ -17,17 +17,17 @@ public class MapGenerator : MonoBehaviour
     //private DrawMap drawMap;
     //private NoiseGenerator noiseGenerator;
 
-    public DrawMap drawMap;
-    public NoiseGenerator noiseGenerator;
-    private void Start()
+    private DrawMap drawMap;
+    private NoiseGenerator noiseGenerator;
+    private void Awake()
     {
-        //drawMap = GetComponent<DrawMap>();
-        //noiseGenerator = GetComponent<NoiseGenerator>();
+        drawMap = GetComponent<DrawMap>();
+        noiseGenerator = GetComponent<NoiseGenerator>();
     } 
-    public void generateNoiseMap()
+    public Texture2D generateNoiseMap()
     {
         float[,] noiseMap = noiseGenerator.makeNoiseMap(drawMap.getWidth(), drawMap.getHeight(), scale , horizontalScroll, verticalScroll, density);
-        drawMap.drawNoiseMap(noiseMap);
-
+        Texture2D texture = drawMap.drawNoiseMap(noiseMap);
+        return texture;
     }
 }
