@@ -22,10 +22,19 @@ public class MapGenerator : MonoBehaviour
     private void Awake()
     {
         drawMap = GetComponent<DrawMap>();
+
         noiseGenerator = GetComponent<NoiseGenerator>();
     } 
+    public void initialize()
+    {
+        drawMap = GetComponent<DrawMap>();
+
+        noiseGenerator = GetComponent<NoiseGenerator>();
+    }
     public Texture2D generateNoiseMap(float scale, float horizontalScroll, float verticalScroll)
     {
+        drawMap = GetComponent<DrawMap>();
+        noiseGenerator = GetComponent<NoiseGenerator>();
         float[,] noiseMap = noiseGenerator.makeNoiseMap(drawMap.getWidth(), drawMap.getHeight(), scale , horizontalScroll, verticalScroll, density);
         Texture2D texture = drawMap.drawNoiseMap(noiseMap);
         return texture;

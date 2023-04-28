@@ -10,6 +10,7 @@ public class ProceduralGenerationWindow : EditorWindow
 
     private float horizontalScroll = 0f;
     private float verticalScroll = 0f;
+    private float surviveFactor = 0.5f;
     private float scale = 1f;
 
     [MenuItem("Window/VegetationGenerator")]
@@ -27,6 +28,7 @@ public class ProceduralGenerationWindow : EditorWindow
 
         horizontalScroll = EditorGUILayout.Slider("Horizontal Scroll", horizontalScroll, -100f, 100f);
         verticalScroll = EditorGUILayout.Slider("Vertical Scroll", verticalScroll, -100f, 100f);
+        surviveFactor = EditorGUILayout.Slider("Survive Factor", surviveFactor, 0f, 1f);
         scale = EditorGUILayout.Slider("Scale", scale, 0.1f, 20f);
 
         if (GUILayout.Button("Generate noiseMap"))
@@ -49,7 +51,7 @@ public class ProceduralGenerationWindow : EditorWindow
             for (int z = 0; z < terrain.terrainData.size.z; z++)
             {
                 float noiseMapValue = noiseMapTexture.GetPixel(x, z).g;
-                if (noiseMapValue > 0.5)
+                if (noiseMapValue > surviveFactor)
                 {
                     Vector3 position = new Vector3(x, 0, z);
                     position.y = terrain.terrainData.GetInterpolatedHeight(x / (float) terrain.terrainData.size.x, z / (float) terrain.terrainData.size.z);
