@@ -18,7 +18,7 @@ public class ProceduralGenerationWindow : EditorWindow
     private float octaves = 1;
 
     [MenuItem("Window/VegetationGenerator")]
- 
+
     public static void ShowWindow()
     {
         GetWindow<ProceduralGenerationWindow>("Vegetation Generation");
@@ -54,21 +54,30 @@ public class ProceduralGenerationWindow : EditorWindow
     {
         float objectUpOffset = objectToSpawn.gameObject.transform.localScale.y; //pivot point is in the middle - it is calculating distance from pivot point to bottom of an object
         Transform parent = new GameObject("Vegetation").transform;
-        Debug.Log("TERRAIN DIMENSIONS: " + terrain.terrainData.size.x + " x " + terrain.terrainData.size.z);
+        //Debug.Log("TERRAIN DIMENSIONS: " + terrain.terrainData.size.x + " x " + terrain.terrainData.size.z);
         for (int x = 0; x < terrain.terrainData.size.x; x++)
         {
             for (int z = 0; z < terrain.terrainData.size.z; z++)
             {
                 float noiseMapValue = noiseMapTexture.GetPixel(x, z).g;
+
                 if (noiseMapValue > surviveFactor)
                 {
-                    Vector3 position = new Vector3(x, 0, z);
-                    position.y = terrain.terrainData.GetInterpolatedHeight(x / (float) terrain.terrainData.size.x, z / (float) terrain.terrainData.size.z) + objectUpOffset;
-                    GameObject plantToSpawn = Instantiate(objectToSpawn, position, Quaternion.identity);
-                    plantToSpawn.transform.SetParent(parent);
+                    for (int i = 1; i <= 20; i++)
+                    {
+                        float spawnX = Random.Range(x, x + 2f);
+                        float spawnZ = Random.Range(z, z + 2f);
+                        Vector3 position = new Vector3(spawnX, 0, spawnZ);
+                        position.y = terrain.terrainData.GetInterpolatedHeight(spawnX / (float)terrain.terrainData.size.x, spawnZ / (float)terrain.terrainData.size.z) + objectUpOffset;
+                        //Vector3 position = new Vector3(x + i / 10, 0, z + i / 10);
+                        //position.y = terrain.terrainData.GetInterpolatedHeight(x / (float)terrain.terrainData.size.x, z / (float)terrain.terrainData.size.z) + objectUpOffset;
+                        GameObject plantToSpawn = Instantiate(objectToSpawn, position, Quaternion.identity);
+                        plantToSpawn.transform.SetParent(parent);
+                    }
                 }
             }
         }
     }
+
 }
 
