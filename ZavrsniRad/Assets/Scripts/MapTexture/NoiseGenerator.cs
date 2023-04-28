@@ -4,25 +4,43 @@ using UnityEngine;
 
 public class NoiseGenerator : MonoBehaviour
 {
-    public float[,] makeNoiseMap(int width, int height, float scale, float horizScroll, float vertScroll, float density)
+    public float[,] makeNoiseMap(int width, int height, float scale, float horizScroll, float vertScroll, float persistence, float octaves)
     {
         float tempX;
         float tempY;
+        float amplitude;
+        float frequency;
         float perlinValue;
+        float totalPerlinNoiseValue = 0f;
         float[,] noiseMap = new float[width, height];
 
         float widthCenter = width / 2f;
         float heightCenter = height / 2f;
         
-        if (scale <= 0) scale = 0.01f;
-        density = Mathf.Clamp01(density);
+        //density = Mathf.Clamp01(density);
         for (int y = 0; y < height; y++)
         {
             for (int x = 0; x < width; x++)
             {
-                tempX = (x - widthCenter) / (width * scale) * 100 * density + horizScroll;  
-                tempY = (y - heightCenter) / (height * scale) * 100 * density + vertScroll;
-                perlinValue = Mathf.PerlinNoise(tempX, tempY);
+                amplitude = 1f;
+                frequency = 1f;
+                totalPerlinNoiseValue = 0f;
+                for (int octave = 0; octave < octaves; octave++)
+                {
+                    /*frequency = Mathf.Pow(2, octave);
+                    amplitude = Mathf.Pow(persistence, octave);*/
+                    tempX = (x - widthCenter) / (width * scale) * 100 + horizScroll;
+                    tempY = (y - heightCenter) / (height * scale) * 100 + vertScroll;
+                    perlinValue = Mathf.PerlinNoise(tempX * frequency, tempY * frequency);
+                    perlinValue = perlinValue * 2 - 1;
+                    totalPerlinNoiseValue += perlinValue * amplitude;
+
+                    frequency *= 2f;
+                    amplitude *= persistence;
+
+                }
+                perlinValue = totalPerlinNoiseValue;
+                //perlinValue = Mathf.PerlinNoise(tempX, tempY);
                 noiseMap[x, y] = perlinValue;
             }
         }
