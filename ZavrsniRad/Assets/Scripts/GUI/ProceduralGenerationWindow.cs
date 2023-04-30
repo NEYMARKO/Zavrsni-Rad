@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using Unity.VisualScripting.FullSerializer;
+using Unity.VisualScripting;
 
 public class ProceduralGenerationWindow : EditorWindow
 {
@@ -26,6 +27,7 @@ public class ProceduralGenerationWindow : EditorWindow
     private void OnGUI()
     {
         noiseMapTexture = (Texture2D)EditorGUILayout.ObjectField("Noise Map Texture", noiseMapTexture, typeof(Texture2D), false, GUILayout.Width(400), GUILayout.Height(400));
+        noiseMapTexture.filterMode = FilterMode.Trilinear;
         objectToSpawn = (GameObject)EditorGUILayout.ObjectField("Vegetation objects", objectToSpawn, typeof(GameObject), true);
         mapGeneratorObject = (GameObject)EditorGUILayout.ObjectField("MapGenerator", mapGeneratorObject, typeof(GameObject), true);
 
@@ -43,30 +45,38 @@ public class ProceduralGenerationWindow : EditorWindow
         {
             MapGenerator mapGenerator = mapGeneratorObject.GetComponent<MapGenerator>();
             noiseMapTexture = mapGenerator.generateNoiseMap(scale, verticalScroll, horizontalScroll, persistence, octaves);
+
         }
 
         if (GUILayout.Button("Generate Vegetation"))
         {
             GenerateVegetation(Terrain.activeTerrain, noiseMapTexture);
         }
+
+
     }
     private void GenerateVegetation(Terrain terrain, Texture2D noiseMapTexture)
     {
         float objectUpOffset = objectToSpawn.gameObject.transform.localScale.y; //pivot point is in the middle - it is calculating distance from pivot point to bottom of an object
         Transform parent = new GameObject("Vegetation").transform;
         //Debug.Log("TERRAIN DIMENSIONS: " + terrain.terrainData.size.x + " x " + terrain.terrainData.size.z);
-        for (int x = 0; x < terrain.terrainData.size.x; x++)
+        int width = (int) terrain.terrainData.size.x;
+        int height = (int)terrain.terrainData.size.z;
+        for (int z = 0; z < height; z++)
         {
-            for (int z = 0; z < terrain.terrainData.size.z; z++)
+            for (int x = 0; x < width; x++)
             {
-                float noiseMapValue = noiseMapTexture.GetPixel(x, z).g;
+                float noiseMapValue = noiseMapTexture.GetPixel(x, z).grayscale;
+                //Debug.Log("(" + x + ", " + z + "): " + noiseMapValue);
 
-                if (noiseMapValue > surviveFactor)
+                if (noiseMapValue >= surviveFactor)
                 {
+                    //Debug.Log("POSITION: (" + x + ", " + z + ") survived" );
                     for (int i = 1; i <= 20; i++)
                     {
-                        float spawnX = Random.Range(x, x + 2f);
-                        float spawnZ = Random.Range(z, z + 2f);
+                        float spawnX = Random.Range(x, x + 1f);
+                        //Debug.Log("SPAWN_x: " + spawnX);
+                        float spawnZ = Random.Range(z, z + 1f);
                         Vector3 position = new Vector3(spawnX, 0, spawnZ);
                         position.y = terrain.terrainData.GetInterpolatedHeight(spawnX / (float)terrain.terrainData.size.x, spawnZ / (float)terrain.terrainData.size.z) + objectUpOffset;
                         //Vector3 position = new Vector3(x + i / 10, 0, z + i / 10);

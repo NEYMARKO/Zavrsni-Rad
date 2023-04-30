@@ -29,10 +29,9 @@ public class NoiseGenerator : MonoBehaviour
                 {
                     /*frequency = Mathf.Pow(2, octave);
                     amplitude = Mathf.Pow(persistence, octave);*/
-                    tempX = (x - widthCenter) / (width * scale) * 100 + horizScroll;
-                    tempY = (y - heightCenter) / (height * scale) * 100 + vertScroll;
-                    perlinValue = Mathf.PerlinNoise(tempX * frequency, tempY * frequency);
-                    perlinValue = perlinValue * 2 - 1;
+                    tempX = (x - widthCenter) / (width * scale * frequency) * 100 + horizScroll;
+                    tempY = (y - heightCenter) / (height * scale * frequency) * 100 + vertScroll;
+                    perlinValue = Mathf.PerlinNoise(tempX, tempY) * 2 - 1;
                     totalPerlinNoiseValue += perlinValue * amplitude;
 
                     frequency *= 2f;

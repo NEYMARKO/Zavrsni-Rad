@@ -11,19 +11,20 @@ public class DrawMap : MonoBehaviour
     {
         //dividing by 10 because plane dimensions are by default 10x10
         //if s is applied to the plane, it will be 10 times bigger than terrain
-        width = (int) terrain.terrainData.size.x / 10;
-        height = (int) terrain.terrainData.size.z / 10;
-
-        Texture2D texture = new Texture2D(width, height);
+        width = (int) terrain.terrainData.size.x;
+        height = (int) terrain.terrainData.size.z;
 
         Debug.Log("Width: " + width);
         Debug.Log("Height: " + height);
+        Texture2D texture = new Texture2D(width, height);
+
+        Debug.Log(noiseMap.Length);
         Color[] colors = new Color[width * height]; 
         for (int y = 0; y < height; y++)
         {
             for (int x = 0; x < width; x++)
             {
-                colors[y * width + x] = Color.Lerp(Color.black, Color.white, noiseMap[x, y]);
+                colors[y * width + x] = Color.Lerp(Color.black, Color.white, noiseMap[y, x]);
             }
         }
         texture.SetPixels(colors);
