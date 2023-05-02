@@ -14,11 +14,11 @@ public class DrawMap : MonoBehaviour
         width = (int) terrain.terrainData.size.x;
         height = (int) terrain.terrainData.size.z;
 
-        Debug.Log("Width: " + width);
-        Debug.Log("Height: " + height);
+        /*Debug.Log("Width: " + width);
+        Debug.Log("Height: " + height);*/
         Texture2D texture = new Texture2D(width, height);
 
-        Debug.Log(noiseMap.Length);
+        //Debug.Log(noiseMap.Length);
         Color[] colors = new Color[width * height]; 
         for (int y = 0; y < height; y++)
         {
