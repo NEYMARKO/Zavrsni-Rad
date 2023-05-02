@@ -32,17 +32,33 @@ public class ProceduralGenerationWindow : EditorWindow
             GUILayout.FlexibleSpace();
         }
         EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.BeginHorizontal();
+        {
+            GUILayout.FlexibleSpace();
+            GUILayout.Label("NOISE MAP PARAMETERS");
+            GUILayout.FlexibleSpace();
+        }
+        EditorGUILayout.EndHorizontal();
+
         objectToSpawn = (GameObject)EditorGUILayout.ObjectField("Vegetation objects", objectToSpawn, typeof(GameObject), true);
         mapGeneratorObject = (GameObject)EditorGUILayout.ObjectField("MapGenerator", mapGeneratorObject, typeof(GameObject), true);
-
-
         horizontalScroll = EditorGUILayout.Slider("Horizontal Scroll", horizontalScroll, -100f, 100f);
         verticalScroll = EditorGUILayout.Slider("Vertical Scroll", verticalScroll, -100f, 100f);
-        surviveFactor = EditorGUILayout.Slider("Survive Factor", surviveFactor, 0f, 1f);
-        maxSpawnHeight = EditorGUILayout.Slider("Maximum spawn height", maxSpawnHeight, 0f, Terrain.activeTerrain.terrainData.size.y);
         persistence = EditorGUILayout.Slider("Persistence", persistence, 0.1f, 2f);
         octaves = (int)EditorGUILayout.Slider("Octaves", octaves, 1, 5);
         scale = EditorGUILayout.Slider("Scale", scale, 0.1f, 20f);
+
+        GUILayout.FlexibleSpace();
+        EditorGUILayout.BeginHorizontal();
+        {
+            GUILayout.FlexibleSpace();
+            GUILayout.Label("VEGETATION SURVIVAL PARAMETERS");
+            GUILayout.FlexibleSpace();
+        }
+        EditorGUILayout.EndHorizontal();
+        surviveFactor = EditorGUILayout.Slider("Survive Factor", surviveFactor, 0f, 1f);
+        maxSpawnHeight = EditorGUILayout.Slider("Maximum spawn height", maxSpawnHeight, 0f, Terrain.activeTerrain.terrainData.size.y);
 
         if (GUILayout.Button("Generate noiseMap"))
         {
@@ -51,12 +67,13 @@ public class ProceduralGenerationWindow : EditorWindow
 
         }
 
+        GUI.enabled = noiseMapTexture == null ? false : true;
         if (GUILayout.Button("Generate Vegetation"))
         {
             GenerateVegetation(Terrain.activeTerrain, noiseMapTexture);
         }
 
-
+        GUI.enabled = true;
     }
     private void GenerateVegetation(Terrain terrain, Texture2D noiseMapTexture)
     {
