@@ -4,21 +4,17 @@ public class DrawMap : MonoBehaviour
 {
     public Renderer planeTextureRenderer;
     public Terrain terrain;
+    public Texture2D terrainTexture;
 
     private int width;
     private int height;
     public Texture2D drawNoiseMap(float[,] noiseMap)
     {
-        //dividing by 10 because plane dimensions are by default 10x10
-        //if s is applied to the plane, it will be 10 times bigger than terrain
         width = (int) terrain.terrainData.size.x;
         height = (int) terrain.terrainData.size.z;
 
-        /*Debug.Log("Width: " + width);
-        Debug.Log("Height: " + height);*/
         Texture2D texture = new Texture2D(width, height);
 
-        //Debug.Log(noiseMap.Length);
         Color[] colors = new Color[width * height]; 
         for (int y = 0; y < height; y++)
         {
@@ -36,6 +32,16 @@ public class DrawMap : MonoBehaviour
         return texture;
     }
 
+    public Texture2D drawSatelliteMap(Texture2D texture)
+    {
+
+        return texture;
+    }
+
+    /*private Color lerpPixels(int x, int y, float[,] noiseMap, Texture2D terrainTexture)
+    {
+        return Color.Lerp(Color.black, Color.white, terrainTexture.GetPixel(x, y).g / 255f);
+    }*/
     public int getWidth()
     {
         return width;
