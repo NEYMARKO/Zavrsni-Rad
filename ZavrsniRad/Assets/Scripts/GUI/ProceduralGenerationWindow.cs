@@ -4,13 +4,17 @@ using Unity.VisualScripting.FullSerializer;
 using Unity.VisualScripting;
 using System.Drawing;
 using UnityEditor.UI;
+using UnityEngine.TextCore.LowLevel;
+using System.Collections.Generic;
 
 public class ProceduralGenerationWindow : EditorWindow
 {
     #region declaration
     GameObject objectToSpawn;
     GameObject mapGeneratorObject;
-    GameObject textureApplier;
+    //GameObject parentObject;
+    private List<MeshFilter> childrenMeshFilters;
+    private MeshFilter targetMeshFilter;
     private Texture2D noiseMapTexture;
     private Texture2D satelliteTexture;
     private Texture2D activeGenerationTexture;
@@ -57,6 +61,7 @@ public class ProceduralGenerationWindow : EditorWindow
 
         objectToSpawn = (GameObject)EditorGUILayout.ObjectField("Vegetation objects", objectToSpawn, typeof(GameObject), true);
         mapGeneratorObject = (GameObject)EditorGUILayout.ObjectField("MapGenerator", mapGeneratorObject, typeof(GameObject), true);
+        //parentObject = (GameObject)EditorGUILayout.ObjectField("ParentObject", parentObject, typeof(GameObject), true);
         horizontalScroll = EditorGUILayout.Slider("Horizontal Scroll", horizontalScroll, -100f, 100f);
         verticalScroll = EditorGUILayout.Slider("Vertical Scroll", verticalScroll, -100f, 100f);
         persistence = EditorGUILayout.Slider("Persistence", persistence, 0.1f, 2f);
@@ -137,14 +142,16 @@ public class ProceduralGenerationWindow : EditorWindow
     private void GenerateVegetation(Terrain terrain, Texture2D spawnTexture, bool useNoiseMap)
     {
         float objectUpOffset = objectToSpawn.gameObject.transform.localScale.y; //pivot point is in the middle - it is calculating distance from pivot point to bottom of an object
+        //Transform parentObjectTransform = parentObject.transform;
         Transform parent = new GameObject("Vegetation").transform;
+        //targetMeshFilter = parent.gameObject.GetComponent<MeshFilter>();
+
         int width = (int) terrain.terrainData.size.x;
         int height = (int)terrain.terrainData.size.z;
         for (int z = 0; z < height; z++)
         {
             for (int x = 0; x < width; x++)
             {
-                float textureValue = useNoiseMap == true ? spawnTexture.GetPixel(x, z).grayscale : spawnTexture.GetPixel(x, z).g;
 
                 var pixel = spawnTexture.GetPixel(x, z);
                 float red = pixel.r;
@@ -155,7 +162,9 @@ public class ProceduralGenerationWindow : EditorWindow
 
 
                 //bool checkIfGreen = ((blue < surviveFactor * green) && (red < surviveFactor * green));
-                bool checkIfGreen = green >= ((red + blue) / 1.25f * (1 + surviveFactor));
+                float textureValue = useNoiseMap == true ? spawnTexture.GetPixel(x, z).grayscale : spawnTexture.GetPixel(x, z).g;
+
+                bool checkIfGreen = greenColorChecker(red, green, blue);
                 bool spawnSurvive = useNoiseMap == true ? textureValue >= surviveFactor : checkIfGreen;
 
                 if (spawnSurvive && textureValue * terrain.terrainData.GetInterpolatedHeight(x / (float)terrain.terrainData.size.x, z / (float)terrain.terrainData.size.z) < maxSpawnHeight)
@@ -167,12 +176,47 @@ public class ProceduralGenerationWindow : EditorWindow
                         Vector3 position = new Vector3(spawnX, 0, spawnZ);
                         position.y = terrain.terrainData.GetInterpolatedHeight(spawnX / (float)terrain.terrainData.size.x, spawnZ / (float)terrain.terrainData.size.z) + objectUpOffset;
                         GameObject plantToSpawn = Instantiate(objectToSpawn, position, Quaternion.identity);
+                        childrenMeshFilters.Add(plantToSpawn.GetComponent<MeshFilter>());
                         plantToSpawn.transform.SetParent(parent);
                     }
                 }
             }
         }
+        combineMeshFilters(parent.gameObject);
     }
     #endregion VegetationGeneration
+
+    private void combineMeshFilters(GameObject parentObject)
+    {
+        MeshFilter[] meshFilters = parentObject.GetComponentsInChildren<MeshFilter>();
+        //Debug.Log(meshFilters.Length);
+        CombineInstance[] combineInstances = new CombineInstance[meshFilters.Length];
+
+        for (int i = 0; i < meshFilters.Length; i++)
+        {
+            combineInstances[i].mesh = meshFilters[i].sharedMesh;
+            combineInstances[i].transform = meshFilters[i].transform.localToWorldMatrix;
+            meshFilters[i].gameObject.SetActive(false);
+        }
+
+        Mesh combinedMesh = new Mesh();
+        combinedMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        combinedMesh.CombineMeshes(combineInstances, true, true);
+
+        GameObject combinedObject = new GameObject("CombinedMesh");
+        combinedObject.transform.SetParent(parentObject.transform);
+        MeshFilter meshFilter = combinedObject.AddComponent<MeshFilter>();
+        meshFilter.mesh = combinedMesh;
+        combinedObject.AddComponent<MeshRenderer>().sharedMaterial = objectToSpawn.GetComponent<MeshRenderer>().sharedMaterial;
+    }
+    private bool greenColorChecker(float red, float green, float blue)
+    {
+        //Debug.Log("RGB: (" + red + ", " + green + ", " + blue + ")");
+        if ((red >=0 && red <= 0.195) && (blue >= 0 && blue <= 0.195) && (green >= 0.392 && green <= 1) || (red <= 0.05 && blue <= 0.05 && green >= 0.05) || green <= 0.5)
+        {
+            return true;
+        }
+        return false;
+    }
 }
 
