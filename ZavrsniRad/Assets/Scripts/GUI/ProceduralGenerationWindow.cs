@@ -6,17 +6,20 @@ using System.Drawing;
 using UnityEditor.UI;
 using UnityEngine.TextCore.LowLevel;
 using System.Collections.Generic;
+using UnityEngine.UIElements;
+using System.Diagnostics.Tracing;
 
 public class ProceduralGenerationWindow : EditorWindow
 {
     #region declaration
     GameObject objectToSpawn;
     GameObject mapGeneratorObject;
-    //GameObject parentObject;
+    GameObject satelliteTextureHolder;
     private List<MeshFilter> childrenMeshFilters;
     private MeshFilter targetMeshFilter;
     private Texture2D noiseMapTexture;
     private Texture2D satelliteTexture;
+    private Texture2D bigSatelliteTexture;
     private Texture2D activeGenerationTexture;
     private string[] options = { "Satellite", "Procedural" };
     private int index;
@@ -61,7 +64,6 @@ public class ProceduralGenerationWindow : EditorWindow
 
         objectToSpawn = (GameObject)EditorGUILayout.ObjectField("Vegetation objects", objectToSpawn, typeof(GameObject), true);
         mapGeneratorObject = (GameObject)EditorGUILayout.ObjectField("MapGenerator", mapGeneratorObject, typeof(GameObject), true);
-        //parentObject = (GameObject)EditorGUILayout.ObjectField("ParentObject", parentObject, typeof(GameObject), true);
         horizontalScroll = EditorGUILayout.Slider("Horizontal Scroll", horizontalScroll, -100f, 100f);
         verticalScroll = EditorGUILayout.Slider("Vertical Scroll", verticalScroll, -100f, 100f);
         persistence = EditorGUILayout.Slider("Persistence", persistence, 0.1f, 2f);
@@ -87,6 +89,8 @@ public class ProceduralGenerationWindow : EditorWindow
     private void showSatellite()
     {
         satelliteTexture = textureAlign(satelliteTexture);
+        satelliteTextureHolder = (GameObject)EditorGUILayout.ObjectField("Satellite texture holder", satelliteTextureHolder, typeof(GameObject), true);
+        bigSatelliteTexture = satelliteTextureHolder.GetComponent<Texture2D>();
         //textureApplier = (GameObject)EditorGUILayout.ObjectField("Texture applier", textureApplier, typeof(GameObject), true);
         checkIfCanGenerate(index);
         surviveFactor = EditorGUILayout.Slider("Survive Factor", surviveFactor, 0f, 1f);
@@ -146,28 +150,24 @@ public class ProceduralGenerationWindow : EditorWindow
         Transform parent = new GameObject("Vegetation").transform;
         //targetMeshFilter = parent.gameObject.GetComponent<MeshFilter>();
 
+        MeshRenderer satelliteTextureHolderRenderer = satelliteTextureHolder.GetComponent<MeshRenderer>();
+        float satelliteTextureHolderWidth = satelliteTextureHolderRenderer.bounds.size.x;
+
         int width = (int) terrain.terrainData.size.x;
         int height = (int)terrain.terrainData.size.z;
         for (int z = 0; z < height; z++)
         {
             for (int x = 0; x < width; x++)
             {
+                UnityEngine.Color trueColor = calculateTrueColor(x, z, (int) Mathf.Round(satelliteTextureHolderWidth / terrain.terrainData.size.x), spawnTexture);
+                //UnityEngine.Color color = spawnTexture.GetPixel(x, z);
 
-                var pixel = spawnTexture.GetPixel(x, z);
-                float red = pixel.r;
-                float green = pixel.g;
-                float blue = pixel.b;
-
-                //Debug.Log("RGB: (" + red + ", " + green + ", " + blue + ")");
-
-
-                //bool checkIfGreen = ((blue < surviveFactor * green) && (red < surviveFactor * green));
                 float textureValue = useNoiseMap == true ? spawnTexture.GetPixel(x, z).grayscale : spawnTexture.GetPixel(x, z).g;
 
-                bool checkIfGreen = greenColorChecker(red, green, blue);
+                bool checkIfGreen = greenColorChecker(trueColor, x, z);
                 bool spawnSurvive = useNoiseMap == true ? textureValue >= surviveFactor : checkIfGreen;
 
-                if (spawnSurvive && textureValue * terrain.terrainData.GetInterpolatedHeight(x / (float)terrain.terrainData.size.x, z / (float)terrain.terrainData.size.z) < maxSpawnHeight)
+                if ((spawnSurvive && textureValue * terrain.terrainData.GetInterpolatedHeight(x / (float)terrain.terrainData.size.x, z / (float)terrain.terrainData.size.z) < maxSpawnHeight) || checkIfGreen)
                 {
                     for (int i = 1; i <= 20; i++)
                     {
@@ -189,7 +189,6 @@ public class ProceduralGenerationWindow : EditorWindow
     private void combineMeshFilters(GameObject parentObject)
     {
         MeshFilter[] meshFilters = parentObject.GetComponentsInChildren<MeshFilter>();
-        //Debug.Log(meshFilters.Length);
         CombineInstance[] combineInstances = new CombineInstance[meshFilters.Length];
 
         for (int i = 0; i < meshFilters.Length; i++)
@@ -209,14 +208,38 @@ public class ProceduralGenerationWindow : EditorWindow
         meshFilter.mesh = combinedMesh;
         combinedObject.AddComponent<MeshRenderer>().sharedMaterial = objectToSpawn.GetComponent<MeshRenderer>().sharedMaterial;
     }
-    private bool greenColorChecker(float red, float green, float blue)
+    private bool greenColorChecker(UnityEngine.Color color, int x, int y)
     {
-        //Debug.Log("RGB: (" + red + ", " + green + ", " + blue + ")");
-        if ((red >=0 && red <= 0.195) && (blue >= 0 && blue <= 0.195) && (green >= 0.392 && green <= 1) || (red <= 0.05 && blue <= 0.05 && green >= 0.05) || green <= 0.5)
+        float hue, saturation, value;
+        UnityEngine.Color.RGBToHSV(color, out hue, out saturation, out value);
+        if (hue >= 72/360f && hue <= 160/360f)
         {
-            return true;
+            if (saturation >= 0.25f && value >= 0.1f)
+            {
+                return true;
+            }
         }
         return false;
+    }
+
+    private UnityEngine.Color calculateTrueColor(int x, int z, int iterations, Texture2D spawnTexture)
+    {
+        float red = 0;
+        float green = 0;
+        float blue = 0;
+        int counter = 0;
+
+        for (int i = 0; i < (int) Mathf.Sqrt(iterations) + 1; i++)
+        {
+            for (int j = 0; j < (int)Mathf.Sqrt(iterations) + 1; j++)
+            {
+                red += spawnTexture.GetPixel(x + i, z + j).r;
+                green += spawnTexture.GetPixel(x + i, z + j).g;
+                blue += spawnTexture.GetPixel(x + i, z + j).b;
+                counter++;
+            }
+        }
+        return new UnityEngine.Color(red/counter, green/counter, blue/counter);
     }
 }
 
