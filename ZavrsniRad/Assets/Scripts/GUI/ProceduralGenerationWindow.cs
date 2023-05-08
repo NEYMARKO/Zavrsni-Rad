@@ -175,7 +175,7 @@ public class ProceduralGenerationWindow : EditorWindow
                         float spawnZ = Random.Range(z, z + 1f);
                         Vector3 position = new Vector3(spawnX, 0, spawnZ);
                         position.y = terrain.terrainData.GetInterpolatedHeight(spawnX / (float)terrain.terrainData.size.x, spawnZ / (float)terrain.terrainData.size.z) + objectUpOffset;
-                        GameObject plantToSpawn = Instantiate(objectToSpawn, position, Quaternion.identity);
+                        GameObject plantToSpawn = Instantiate(this.objectToSpawn, position, Quaternion.identity);
                         childrenMeshFilters.Add(plantToSpawn.GetComponent<MeshFilter>());
                         plantToSpawn.transform.SetParent(parent);
                     }
