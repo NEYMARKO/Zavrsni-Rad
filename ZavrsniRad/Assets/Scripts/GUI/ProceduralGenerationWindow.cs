@@ -1,22 +1,15 @@
 using UnityEngine;
 using UnityEditor;
-using Unity.VisualScripting.FullSerializer;
-using Unity.VisualScripting;
-using System.Drawing;
-using UnityEditor.UI;
-using UnityEngine.TextCore.LowLevel;
 using System.Collections.Generic;
-using UnityEngine.UIElements;
-using System.Diagnostics.Tracing;
+using System;
+using UnityEngine.Jobs;
 
 public class ProceduralGenerationWindow : EditorWindow
 {
     #region declaration
     GameObject objectToSpawn;
     GameObject mapGeneratorObject;
-    GameObject satelliteTextureHolder;
     private List<MeshFilter> childrenMeshFilters;
-    private MeshFilter targetMeshFilter;
     private Texture2D noiseMapTexture;
     private Texture2D satelliteTexture;
     private Texture2D bigSatelliteTexture;
@@ -78,8 +71,7 @@ public class ProceduralGenerationWindow : EditorWindow
             GUILayout.FlexibleSpace();
         }
         EditorGUILayout.EndHorizontal();
-        surviveFactor = EditorGUILayout.Slider("Survive Factor", surviveFactor, 0f, 1f);
-        maxSpawnHeight = EditorGUILayout.Slider("Maximum spawn height", maxSpawnHeight, 0f, Terrain.activeTerrain.terrainData.size.y);
+        showSpawnSurviveParammeters();
         showGenerateNoise();
         checkIfCanGenerate(index);
 
@@ -89,12 +81,8 @@ public class ProceduralGenerationWindow : EditorWindow
     private void showSatellite()
     {
         satelliteTexture = textureAlign(satelliteTexture);
-        satelliteTextureHolder = (GameObject)EditorGUILayout.ObjectField("Satellite texture holder", satelliteTextureHolder, typeof(GameObject), true);
-        bigSatelliteTexture = satelliteTextureHolder.GetComponent<Texture2D>();
-        //textureApplier = (GameObject)EditorGUILayout.ObjectField("Texture applier", textureApplier, typeof(GameObject), true);
         checkIfCanGenerate(index);
-        surviveFactor = EditorGUILayout.Slider("Survive Factor", surviveFactor, 0f, 1f);
-        maxSpawnHeight = EditorGUILayout.Slider("Maximum spawn height", maxSpawnHeight, 0f, Terrain.activeTerrain.terrainData.size.y);
+        showSpawnSurviveParammeters();
     }
 
     private Texture2D textureAlign(Texture2D texture)
@@ -142,50 +130,116 @@ public class ProceduralGenerationWindow : EditorWindow
         }
     }
 
+    private void showSpawnSurviveParammeters()
+    {
+        surviveFactor = EditorGUILayout.Slider("Survive Factor", surviveFactor, 0f, 1f);
+        maxSpawnHeight = EditorGUILayout.Slider("Maximum spawn height", maxSpawnHeight, 0f, Terrain.activeTerrain.terrainData.size.y);
+    }
     #region VegetationGeneration
+
+
+
+    private int[,] scanSatelliteImage(Texture2D satelliteTexture)
+    {
+        int satelliteTextureWidth = satelliteTexture.width;
+        int satelliteTextureHeight = satelliteTexture.height;
+        int[,] greenPositions = new int[satelliteTextureWidth, satelliteTextureHeight];
+
+        int counter = 0;
+        for (int z = 0; z < satelliteTextureHeight; z++)
+        {
+            for (int x = 0; x < satelliteTextureWidth; x++)
+            {
+                UnityEngine.Color pixel = satelliteTexture.GetPixel(x, z);
+                if (greenColorChecker(pixel))
+                {
+                    greenPositions[x, z] = 1;
+                    counter++;
+                }
+                else
+                {
+                    greenPositions[x, z] = 0;
+                }
+            }
+        }
+        Debug.Log("COUNTER: " + counter);
+        return greenPositions;
+    }
     private void GenerateVegetation(Terrain terrain, Texture2D spawnTexture, bool useNoiseMap)
     {
+        /*Debug.Log("TEXURE DIMENSIONS: " + satelliteTexture.width + " " + satelliteTexture.height);
+        Debug.Log("SATELLITE TEXTURE / TERRAIN: " + satelliteTexture.width / terrain.terrainData.size.x);
+        Debug.Log("ROUNDED with (int): " + (int) (satelliteTexture.width / terrain.terrainData.size.x));*/
+
         float objectUpOffset = objectToSpawn.gameObject.transform.localScale.y; //pivot point is in the middle - it is calculating distance from pivot point to bottom of an object
-        //Transform parentObjectTransform = parentObject.transform;
         Transform parent = new GameObject("Vegetation").transform;
-        //targetMeshFilter = parent.gameObject.GetComponent<MeshFilter>();
-
-        MeshRenderer satelliteTextureHolderRenderer = satelliteTextureHolder.GetComponent<MeshRenderer>();
-        float satelliteTextureHolderWidth = satelliteTextureHolderRenderer.bounds.size.x;
-
-        int width = (int) terrain.terrainData.size.x;
-        int height = (int)terrain.terrainData.size.z;
-        for (int z = 0; z < height; z++)
+        if (!useNoiseMap)
         {
-            for (int x = 0; x < width; x++)
+            generateUsingScan(terrain, objectUpOffset, parent, satelliteTexture.width, satelliteTexture.height);
+        }
+
+        else 
+        {
+            int satelliteTextureWidth = satelliteTexture.width;
+
+            int width = (int)terrain.terrainData.size.x;
+            int height = (int)terrain.terrainData.size.z;
+
+            for (int z = 0; z < height; z++)
             {
-                UnityEngine.Color trueColor = calculateTrueColor(x, z, (int) Mathf.Round(satelliteTextureHolderWidth / terrain.terrainData.size.x), spawnTexture);
-                //UnityEngine.Color color = spawnTexture.GetPixel(x, z);
-
-                float textureValue = useNoiseMap == true ? spawnTexture.GetPixel(x, z).grayscale : spawnTexture.GetPixel(x, z).g;
-
-                bool checkIfGreen = greenColorChecker(trueColor, x, z);
-                bool spawnSurvive = useNoiseMap == true ? textureValue >= surviveFactor : checkIfGreen;
-
-                if ((spawnSurvive && textureValue * terrain.terrainData.GetInterpolatedHeight(x / (float)terrain.terrainData.size.x, z / (float)terrain.terrainData.size.z) < maxSpawnHeight) || checkIfGreen)
+                for (int x = 0; x < width; x++)
                 {
-                    for (int i = 1; i <= 20; i++)
+
+                    Vector2 pixelPosition = new Vector2(x, z);
+
+                    UnityEngine.Color trueColor = calculateTrueColor(pixelPosition, (int)(satelliteTextureWidth / terrain.terrainData.size.x), spawnTexture);
+
+                    float textureValue = useNoiseMap == true ? spawnTexture.GetPixel(x, z).grayscale : spawnTexture.GetPixel(x, z).g;
+
+                    bool checkIfGreen = greenColorChecker(trueColor);
+                    bool spawnSurvive = useNoiseMap == true ? textureValue >= surviveFactor : checkIfGreen;
+
+                    if ((spawnSurvive && textureValue * terrain.terrainData.GetInterpolatedHeight(x / (float)terrain.terrainData.size.x, z / (float)terrain.terrainData.size.z) < maxSpawnHeight) || checkIfGreen)
                     {
-                        float spawnX = Random.Range(x, x + 1f);
-                        float spawnZ = Random.Range(z, z + 1f);
-                        Vector3 position = new Vector3(spawnX, 0, spawnZ);
-                        position.y = terrain.terrainData.GetInterpolatedHeight(spawnX / (float)terrain.terrainData.size.x, spawnZ / (float)terrain.terrainData.size.z) + objectUpOffset;
-                        GameObject plantToSpawn = Instantiate(this.objectToSpawn, position, Quaternion.identity);
-                        childrenMeshFilters.Add(plantToSpawn.GetComponent<MeshFilter>());
-                        plantToSpawn.transform.SetParent(parent);
+                        for (int i = 1; i <= 20; i++)
+                        {
+                            float spawnX = UnityEngine.Random.Range(x, x + 1f);
+                            float spawnZ = UnityEngine.Random.Range(z, z + 1f);
+                            Vector3 position = new Vector3(spawnX, 0, spawnZ);
+                            position.y = terrain.terrainData.GetInterpolatedHeight(spawnX / (float)terrain.terrainData.size.x, spawnZ / (float)terrain.terrainData.size.z) + objectUpOffset;
+                            GameObject plantToSpawn = Instantiate(objectToSpawn, position, Quaternion.identity);
+                            childrenMeshFilters.Add(plantToSpawn.GetComponent<MeshFilter>());
+                            plantToSpawn.transform.SetParent(parent);
+                        }
                     }
                 }
             }
         }
         combineMeshFilters(parent.gameObject);
+        DestroyImmediate(parent.gameObject);
+
     }
     #endregion VegetationGeneration
 
+    private void generateUsingScan(Terrain terrain, float objectUpOffset, Transform parent, float textureWidth, float textureHeight)
+    {
+        int[,] greenSurface = scanSatelliteImage(satelliteTexture);
+
+        for (int j = 0; j < textureHeight; j++)
+        {
+            for (int i = 0; i < textureWidth; i++)
+            {
+                if (greenSurface[i, j] == 1)
+                {
+                    Vector3 position = new Vector3(i/textureWidth * terrain.terrainData.size.x, 0, j/textureHeight * terrain.terrainData.size.z);
+                    position.y = terrain.terrainData.GetInterpolatedHeight(i / (float) textureWidth * terrain.terrainData.size.x, j / (float)textureHeight * terrain.terrainData.size.z) + objectUpOffset;
+                    GameObject plantToSpawn = Instantiate(objectToSpawn, position, Quaternion.identity);
+                    childrenMeshFilters.Add(plantToSpawn.GetComponent<MeshFilter>());
+                    plantToSpawn.transform.SetParent(parent);
+                }
+            }
+        }
+    }
     private void combineMeshFilters(GameObject parentObject)
     {
         MeshFilter[] meshFilters = parentObject.GetComponentsInChildren<MeshFilter>();
@@ -195,26 +249,27 @@ public class ProceduralGenerationWindow : EditorWindow
         {
             combineInstances[i].mesh = meshFilters[i].sharedMesh;
             combineInstances[i].transform = meshFilters[i].transform.localToWorldMatrix;
-            meshFilters[i].gameObject.SetActive(false);
+            //meshFilters[i].gameObject.SetActive(false);
+            //DestroyImmediate(meshFilters[i].gameObject);
         }
 
         Mesh combinedMesh = new Mesh();
         combinedMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
         combinedMesh.CombineMeshes(combineInstances, true, true);
 
-        GameObject combinedObject = new GameObject("CombinedMesh");
-        combinedObject.transform.SetParent(parentObject.transform);
+        GameObject combinedObject = new GameObject("Combined Vegetation");
+        //combinedObject.transform.SetParent(parentObject.transform);
         MeshFilter meshFilter = combinedObject.AddComponent<MeshFilter>();
         meshFilter.mesh = combinedMesh;
         combinedObject.AddComponent<MeshRenderer>().sharedMaterial = objectToSpawn.GetComponent<MeshRenderer>().sharedMaterial;
     }
-    private bool greenColorChecker(UnityEngine.Color color, int x, int y)
+    private bool greenColorChecker(UnityEngine.Color color)
     {
         float hue, saturation, value;
         UnityEngine.Color.RGBToHSV(color, out hue, out saturation, out value);
-        if (hue >= 72/360f && hue <= 160/360f)
+        if (hue >= 100/360f && hue <= 160/360f)
         {
-            if (saturation >= 0.25f && value >= 0.1f)
+            if (saturation >= 0.35f && value >= 0.05f)
             {
                 return true;
             }
@@ -222,24 +277,29 @@ public class ProceduralGenerationWindow : EditorWindow
         return false;
     }
 
-    private UnityEngine.Color calculateTrueColor(int x, int z, int iterations, Texture2D spawnTexture)
+    private UnityEngine.Color calculateTrueColor(Vector2 pixelPosition, int factor, Texture2D spawnTexture)
     {
+        int x = (int) pixelPosition.x;
+        int z = (int) pixelPosition.y;
+
         float red = 0;
         float green = 0;
         float blue = 0;
+        float alpha = 0;
         int counter = 0;
 
-        for (int i = 0; i < (int) Mathf.Sqrt(iterations) + 1; i++)
+        for (int i = z * factor; i < (z + 1) * factor; i++)
         {
-            for (int j = 0; j < (int)Mathf.Sqrt(iterations) + 1; j++)
+            for (int j = x * factor; j < (x + 1) * factor; j++)
             {
-                red += spawnTexture.GetPixel(x + i, z + j).r;
-                green += spawnTexture.GetPixel(x + i, z + j).g;
-                blue += spawnTexture.GetPixel(x + i, z + j).b;
+                red += spawnTexture.GetPixel(i, j).r;
+                green += spawnTexture.GetPixel(i, j).g;
+                blue += spawnTexture.GetPixel(i, j).b;
+                alpha += spawnTexture.GetPixel(i, j).a;
                 counter++;
             }
         }
-        return new UnityEngine.Color(red/counter, green/counter, blue/counter);
+        return new UnityEngine.Color(red/counter, green/counter, blue/counter, alpha/counter);
     }
 }
 
