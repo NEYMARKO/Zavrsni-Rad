@@ -139,11 +139,11 @@ public class ProceduralGenerationWindow : EditorWindow
 
 
 
-    private int[,] scanSatelliteImage(Texture2D satelliteTexture)
+    private pixelInfo[,] scanSatelliteImage(Texture2D satelliteTexture)
     {
         int satelliteTextureWidth = satelliteTexture.width;
         int satelliteTextureHeight = satelliteTexture.height;
-        int[,] greenPositions = new int[satelliteTextureWidth, satelliteTextureHeight];
+        pixelInfo[,] greenPositions = new pixelInfo[satelliteTextureWidth, satelliteTextureHeight];
 
         int counter = 0;
         for (int z = 0; z < satelliteTextureHeight; z++)
@@ -151,14 +151,15 @@ public class ProceduralGenerationWindow : EditorWindow
             for (int x = 0; x < satelliteTextureWidth; x++)
             {
                 UnityEngine.Color pixel = satelliteTexture.GetPixel(x, z);
-                if (greenColorChecker(pixel))
+                float value = greenColorChecker(pixel);
+                if (value > 0)
                 {
-                    greenPositions[x, z] = 1;
+                    greenPositions[x, z] = new pixelInfo(1, value);
                     counter++;
                 }
                 else
                 {
-                    greenPositions[x, z] = 0;
+                    greenPositions[x, z] = new pixelInfo(0, value);
                 }
             }
         }
@@ -167,10 +168,6 @@ public class ProceduralGenerationWindow : EditorWindow
     }
     private void GenerateVegetation(Terrain terrain, Texture2D spawnTexture, bool useNoiseMap)
     {
-        /*Debug.Log("TEXURE DIMENSIONS: " + satelliteTexture.width + " " + satelliteTexture.height);
-        Debug.Log("SATELLITE TEXTURE / TERRAIN: " + satelliteTexture.width / terrain.terrainData.size.x);
-        Debug.Log("ROUNDED with (int): " + (int) (satelliteTexture.width / terrain.terrainData.size.x));*/
-
         float objectUpOffset = objectToSpawn.gameObject.transform.localScale.y; //pivot point is in the middle - it is calculating distance from pivot point to bottom of an object
         Transform parent = new GameObject("Vegetation").transform;
         if (!useNoiseMap)
@@ -208,7 +205,7 @@ public class ProceduralGenerationWindow : EditorWindow
                 }
             }
         }
-        combineMeshFilters(parent.gameObject);
+        combineMeshFilters(parent.gameObject);  //easier and faster to delete parent instead all of the children separately
         DestroyImmediate(parent.gameObject);
 
     }
@@ -216,13 +213,14 @@ public class ProceduralGenerationWindow : EditorWindow
 
     private void generateUsingScan(Terrain terrain, float objectUpOffset, Transform parent, float textureWidth, float textureHeight)
     {
-        int[,] greenSurface = scanSatelliteImage(satelliteTexture);
+        pixelInfo[,] greenSurface = scanSatelliteImage(satelliteTexture);
 
         for (int j = 0; j < textureHeight; j++)
         {
             for (int i = 0; i < textureWidth; i++)
             {
-                if (greenSurface[i, j] == 1)
+                if (greenSurface[i, j].spawnValue == 1 && (1 - greenSurface[i, j].colorValue) >= surviveFactor && (terrain.terrainData.GetInterpolatedHeight(i / textureWidth, j / textureHeight) + objectUpOffset) <= maxSpawnHeight)
+                    //1 - greenSurface[i, j].colorValue => only most dense will remain (they have smallest hsv value)
                 {
                     Vector3 position = new Vector3(i/textureWidth * terrain.terrainData.size.x, 0, j/textureHeight * terrain.terrainData.size.z);
                     position.y = terrain.terrainData.GetInterpolatedHeight(i / textureWidth, j / textureHeight) + objectUpOffset;
@@ -242,8 +240,6 @@ public class ProceduralGenerationWindow : EditorWindow
         {
             combineInstances[i].mesh = meshFilters[i].sharedMesh;
             combineInstances[i].transform = meshFilters[i].transform.localToWorldMatrix;
-            //meshFilters[i].gameObject.SetActive(false);
-            //DestroyImmediate(meshFilters[i].gameObject);
         }
 
         Mesh combinedMesh = new Mesh();
@@ -251,23 +247,34 @@ public class ProceduralGenerationWindow : EditorWindow
         combinedMesh.CombineMeshes(combineInstances, true, true);
 
         GameObject combinedObject = new GameObject("Combined Vegetation");
-        //combinedObject.transform.SetParent(parentObject.transform);
         MeshFilter meshFilter = combinedObject.AddComponent<MeshFilter>();
         meshFilter.mesh = combinedMesh;
         combinedObject.AddComponent<MeshRenderer>().sharedMaterial = objectToSpawn.GetComponent<MeshRenderer>().sharedMaterial;
     }
-    private bool greenColorChecker(UnityEngine.Color color)
+    private float greenColorChecker(UnityEngine.Color color)
     {
         float hue, saturation, value;
         UnityEngine.Color.RGBToHSV(color, out hue, out saturation, out value);
-        if (hue >= 120/360f && hue <= 160/360f)
+        if (hue >= 100/360f && hue <= 180/360f)
         {
             if (saturation >= 0.05f && value >= 0.05f)
             {
-                return true;
+                return value;
             }
         }
-        return false;
+        return 0;
+    }
+
+    struct pixelInfo
+    {
+        public int spawnValue;
+        public float colorValue;
+
+        public pixelInfo(int spawnValue, float colorValue)
+        {
+            this.spawnValue = spawnValue;
+            this.colorValue = colorValue;
+        }
     }
 }
 
