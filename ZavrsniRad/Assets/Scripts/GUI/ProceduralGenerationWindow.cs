@@ -180,8 +180,6 @@ public class ProceduralGenerationWindow : EditorWindow
 
         else 
         {
-            int satelliteTextureWidth = satelliteTexture.width;
-
             int width = (int)terrain.terrainData.size.x;
             int height = (int)terrain.terrainData.size.z;
 
@@ -190,16 +188,11 @@ public class ProceduralGenerationWindow : EditorWindow
                 for (int x = 0; x < width; x++)
                 {
 
-                    Vector2 pixelPosition = new Vector2(x, z);
+                    float textureValue = spawnTexture.GetPixel(x, z).grayscale;
 
-                    UnityEngine.Color trueColor = calculateTrueColor(pixelPosition, (int)(satelliteTextureWidth / terrain.terrainData.size.x), spawnTexture);
+                    bool spawnSurvive = textureValue >= surviveFactor;
 
-                    float textureValue = useNoiseMap == true ? spawnTexture.GetPixel(x, z).grayscale : spawnTexture.GetPixel(x, z).g;
-
-                    bool checkIfGreen = greenColorChecker(trueColor);
-                    bool spawnSurvive = useNoiseMap == true ? textureValue >= surviveFactor : checkIfGreen;
-
-                    if ((spawnSurvive && textureValue * terrain.terrainData.GetInterpolatedHeight(x / (float)terrain.terrainData.size.x, z / (float)terrain.terrainData.size.z) < maxSpawnHeight) || checkIfGreen)
+                    if ((spawnSurvive && textureValue * terrain.terrainData.GetInterpolatedHeight(x / (float)terrain.terrainData.size.x, z / (float)terrain.terrainData.size.z) < maxSpawnHeight))
                     {
                         for (int i = 1; i <= 20; i++)
                         {
@@ -232,7 +225,7 @@ public class ProceduralGenerationWindow : EditorWindow
                 if (greenSurface[i, j] == 1)
                 {
                     Vector3 position = new Vector3(i/textureWidth * terrain.terrainData.size.x, 0, j/textureHeight * terrain.terrainData.size.z);
-                    position.y = terrain.terrainData.GetInterpolatedHeight(i / (float) textureWidth * terrain.terrainData.size.x, j / (float)textureHeight * terrain.terrainData.size.z) + objectUpOffset;
+                    position.y = terrain.terrainData.GetInterpolatedHeight(i / textureWidth, j / textureHeight) + objectUpOffset;
                     GameObject plantToSpawn = Instantiate(objectToSpawn, position, Quaternion.identity);
                     childrenMeshFilters.Add(plantToSpawn.GetComponent<MeshFilter>());
                     plantToSpawn.transform.SetParent(parent);
@@ -267,39 +260,14 @@ public class ProceduralGenerationWindow : EditorWindow
     {
         float hue, saturation, value;
         UnityEngine.Color.RGBToHSV(color, out hue, out saturation, out value);
-        if (hue >= 100/360f && hue <= 160/360f)
+        if (hue >= 120/360f && hue <= 160/360f)
         {
-            if (saturation >= 0.35f && value >= 0.05f)
+            if (saturation >= 0.05f && value >= 0.05f)
             {
                 return true;
             }
         }
         return false;
-    }
-
-    private UnityEngine.Color calculateTrueColor(Vector2 pixelPosition, int factor, Texture2D spawnTexture)
-    {
-        int x = (int) pixelPosition.x;
-        int z = (int) pixelPosition.y;
-
-        float red = 0;
-        float green = 0;
-        float blue = 0;
-        float alpha = 0;
-        int counter = 0;
-
-        for (int i = z * factor; i < (z + 1) * factor; i++)
-        {
-            for (int j = x * factor; j < (x + 1) * factor; j++)
-            {
-                red += spawnTexture.GetPixel(i, j).r;
-                green += spawnTexture.GetPixel(i, j).g;
-                blue += spawnTexture.GetPixel(i, j).b;
-                alpha += spawnTexture.GetPixel(i, j).a;
-                counter++;
-            }
-        }
-        return new UnityEngine.Color(red/counter, green/counter, blue/counter, alpha/counter);
     }
 }
 
