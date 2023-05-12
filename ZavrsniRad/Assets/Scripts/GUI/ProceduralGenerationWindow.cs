@@ -163,7 +163,7 @@ public class ProceduralGenerationWindow : EditorWindow
                 }
             }
         }
-        Debug.Log("COUNTER: " + counter);
+        //Debug.Log("COUNTER: " + counter);
         return greenPositions;
     }
     private void GenerateVegetation(Terrain terrain, Texture2D spawnTexture, bool useNoiseMap)
@@ -207,19 +207,24 @@ public class ProceduralGenerationWindow : EditorWindow
         }
         combineMeshFilters(parent.gameObject);  //easier and faster to delete parent instead all of the children separately
         DestroyImmediate(parent.gameObject);
-
+        Debug.Log(childrenMeshFilters.Count);
+        childrenMeshFilters.Clear();
     }
     #endregion VegetationGeneration
 
     private void generateUsingScan(Terrain terrain, float objectUpOffset, Transform parent, float textureWidth, float textureHeight)
     {
         pixelInfo[,] greenSurface = scanSatelliteImage(satelliteTexture);
+        if (childrenMeshFilters == null) 
+        { 
+            childrenMeshFilters= new List<MeshFilter>(); 
+        }
 
         for (int j = 0; j < textureHeight; j++)
         {
             for (int i = 0; i < textureWidth; i++)
             {
-                if (greenSurface[i, j].spawnValue == 1 && (1 - greenSurface[i, j].colorValue) >= surviveFactor && (terrain.terrainData.GetInterpolatedHeight(i / textureWidth, j / textureHeight) + objectUpOffset) <= maxSpawnHeight)
+                if (greenSurface[i, j].spawnValue == 1 && greenSurface[i, j].colorValue <= surviveFactor && (terrain.terrainData.GetInterpolatedHeight(i / textureWidth, j / textureHeight) + objectUpOffset) <= maxSpawnHeight)
                     //1 - greenSurface[i, j].colorValue => only most dense will remain (they have smallest hsv value)
                 {
                     Vector3 position = new Vector3(i/textureWidth * terrain.terrainData.size.x, 0, j/textureHeight * terrain.terrainData.size.z);
