@@ -170,6 +170,12 @@ public class ProceduralGenerationWindow : EditorWindow
     {
         float objectUpOffset = objectToSpawn.gameObject.transform.localScale.y; //pivot point is in the middle - it is calculating distance from pivot point to bottom of an object
         Transform parent = new GameObject("Vegetation").transform;
+
+        if (childrenMeshFilters == null)
+        {
+            childrenMeshFilters = new List<MeshFilter>();
+        }
+
         if (!useNoiseMap)
         {
             generateUsingScan(terrain, objectUpOffset, parent, satelliteTexture.width, satelliteTexture.height);
@@ -215,10 +221,6 @@ public class ProceduralGenerationWindow : EditorWindow
     private void generateUsingScan(Terrain terrain, float objectUpOffset, Transform parent, float textureWidth, float textureHeight)
     {
         pixelInfo[,] greenSurface = scanSatelliteImage(satelliteTexture);
-        if (childrenMeshFilters == null) 
-        { 
-            childrenMeshFilters= new List<MeshFilter>(); 
-        }
 
         for (int j = 0; j < textureHeight; j++)
         {
