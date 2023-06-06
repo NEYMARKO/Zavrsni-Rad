@@ -216,6 +216,7 @@ public class ProceduralGenerationWindow : EditorWindow
                 }
             }
         }
+        //Debug.Log(childrenMeshFilters.Count);
         combineMeshFilters(parent.gameObject);  //easier and faster to delete parent instead all of the children separately
         DestroyImmediate(parent.gameObject);
         Debug.Log(childrenMeshFilters.Count);
