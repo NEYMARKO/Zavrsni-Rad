@@ -196,7 +196,7 @@ public class ProceduralGenerationWindow : EditorWindow
 
                     float textureValue = spawnTexture.GetPixel(x, z).grayscale;
 
-                    bool spawnSurvive = textureValue >= surviveFactor;
+                    bool spawnSurvive = textureValue >= (1 - surviveFactor);
 
                     float spawnHeight = textureValue * terrain.terrainData.GetInterpolatedHeight(x / (float)terrain.terrainData.size.x, z / (float)terrain.terrainData.size.z);
                     float angle = calculateSteepness(terrain, x, z, maxSteepness, useNoiseMap, null);
