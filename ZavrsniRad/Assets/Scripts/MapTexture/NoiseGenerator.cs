@@ -17,7 +17,6 @@ public class NoiseGenerator : MonoBehaviour
         float widthCenter = width / 2f;
         float heightCenter = height / 2f;
         
-        //density = Mathf.Clamp01(density);
         for (int y = 0; y < height; y++)
         {
             for (int x = 0; x < width; x++)
@@ -27,8 +26,6 @@ public class NoiseGenerator : MonoBehaviour
                 totalPerlinNoiseValue = 0f;
                 for (int octave = 0; octave < octaves; octave++)
                 {
-                    /*frequency = Mathf.Pow(2, octave);
-                    amplitude = Mathf.Pow(persistence, octave);*/
                     tempX = (x - widthCenter) / (width * scale * frequency) * 100 + horizScroll;
                     tempY = (y - heightCenter) / (height * scale * frequency) * 100 + vertScroll;
                     perlinValue = Mathf.PerlinNoise(tempX, tempY) * 2 - 1;
@@ -38,9 +35,7 @@ public class NoiseGenerator : MonoBehaviour
                     amplitude *= persistence;
 
                 }
-                perlinValue = totalPerlinNoiseValue;
-                //perlinValue = Mathf.PerlinNoise(tempX, tempY);
-                noiseMap[x, y] = perlinValue;
+                noiseMap[x, y] = totalPerlinNoiseValue;
             }
         }
         return noiseMap;

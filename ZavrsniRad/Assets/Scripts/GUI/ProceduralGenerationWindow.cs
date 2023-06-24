@@ -13,7 +13,6 @@ public class ProceduralGenerationWindow : EditorWindow
     private List<MeshFilter> childrenMeshFilters;
     private Texture2D noiseMapTexture;
     private Texture2D satelliteTexture;
-    private Texture2D bigSatelliteTexture;
     private Texture2D activeGenerationTexture;
     private string[] options = { "Satellite", "Procedural" };
     private int index;
@@ -121,7 +120,7 @@ public class ProceduralGenerationWindow : EditorWindow
         if (GUILayout.Button("Generate noiseMap"))
         {
             MapGenerator mapGenerator = mapGeneratorObject.GetComponent<MapGenerator>();
-            noiseMapTexture = mapGenerator.generateNoiseMap(scale, verticalScroll, horizontalScroll, persistence, octaves);
+            noiseMapTexture = mapGenerator.generateNoiseMap(Terrain.activeTerrain, scale, verticalScroll, horizontalScroll, persistence, octaves);
         }
     }
     private void showVegetationGeneration(bool useNoiseMap)
@@ -136,7 +135,7 @@ public class ProceduralGenerationWindow : EditorWindow
     {
         surviveFactor = EditorGUILayout.Slider("Survive Factor", surviveFactor, 0f, 1f);
         maxSpawnHeight = EditorGUILayout.Slider("Maximum spawn height", maxSpawnHeight, 0f, Terrain.activeTerrain.terrainData.size.y);
-        maxSteepness = EditorGUILayout.Slider("Maximum steepness angle", maxSteepness, 0f, 90f);
+        maxSteepness = EditorGUILayout.Slider("Maximum steepness angle", maxSteepness, 0f, 60f);
     }
     #region VegetationGeneration
 
@@ -166,7 +165,6 @@ public class ProceduralGenerationWindow : EditorWindow
                 }
             }
         }
-        //Debug.Log("COUNTER: " + counter);
         return greenPositions;
     }
     private void GenerateVegetation(Terrain terrain, Texture2D spawnTexture, bool useNoiseMap)
@@ -198,16 +196,16 @@ public class ProceduralGenerationWindow : EditorWindow
 
                     bool spawnSurvive = textureValue >= (1 - surviveFactor);
 
-                    float spawnHeight = textureValue * terrain.terrainData.GetInterpolatedHeight(x / (float)terrain.terrainData.size.x, z / (float)terrain.terrainData.size.z);
+                    float spawnHeight = terrain.terrainData.GetInterpolatedHeight(x / (float)terrain.terrainData.size.x, z / (float)terrain.terrainData.size.z);
                     float angle = calculateSteepness(terrain, x, z, maxSteepness, useNoiseMap, null);
-                    if (spawnSurvive && spawnHeight < maxSpawnHeight && angle <= maxSteepness)
+                    if (spawnSurvive && spawnHeight <= maxSpawnHeight && angle <= maxSteepness)
                     {
                         for (int i = 1; i <= 20; i++)
                         {
                             float spawnX = UnityEngine.Random.Range(x, x + 1f);
                             float spawnZ = UnityEngine.Random.Range(z, z + 1f);
-                            Vector3 position = new Vector3(spawnX, 0, spawnZ);
-                            position.y = terrain.terrainData.GetInterpolatedHeight(spawnX / (float)terrain.terrainData.size.x, spawnZ / (float)terrain.terrainData.size.z) + objectUpOffset;
+                            spawnHeight = terrain.terrainData.GetInterpolatedHeight(spawnX / (float)terrain.terrainData.size.x, spawnZ / (float)terrain.terrainData.size.z) + objectUpOffset;
+                            Vector3 position = new Vector3(spawnX, spawnHeight, spawnZ);
                             GameObject plantToSpawn = Instantiate(objectToSpawn, position, Quaternion.identity);
                             childrenMeshFilters.Add(plantToSpawn.GetComponent<MeshFilter>());
                             plantToSpawn.transform.SetParent(parent);
@@ -216,10 +214,8 @@ public class ProceduralGenerationWindow : EditorWindow
                 }
             }
         }
-        //Debug.Log(childrenMeshFilters.Count);
-        combineMeshFilters(parent.gameObject);  //easier and faster to delete parent instead all of the children separately
+        combineMeshFilters(parent.gameObject); 
         DestroyImmediate(parent.gameObject);
-        Debug.Log(childrenMeshFilters.Count);
         childrenMeshFilters.Clear();
     }
     #endregion VegetationGeneration
@@ -239,11 +235,9 @@ public class ProceduralGenerationWindow : EditorWindow
                     //1 - greenSurface[i, j].colorValue => only most dense will remain (they have smallest hsv value)
                 {
                     float angle = calculateSteepness(terrain, i, j, maxSteepness, useNoiseMap, satelliteTexture);
-                    //Debug.Log("ANGLE (" + i + ", " + j + "): " + angle);
                     if (angle <= maxSteepness)
                     {
-                        Vector3 position = new Vector3(i / textureWidth * terrain.terrainData.size.x, 0, j / textureHeight * terrain.terrainData.size.z);
-                        position.y = terrain.terrainData.GetInterpolatedHeight(i / textureWidth, j / textureHeight) + objectUpOffset;
+                        Vector3 position = new Vector3(i / textureWidth * terrain.terrainData.size.x, height + objectUpOffset, j / textureHeight * terrain.terrainData.size.z);
                         GameObject plantToSpawn = Instantiate(objectToSpawn, position, Quaternion.identity);
                         childrenMeshFilters.Add(plantToSpawn.GetComponent<MeshFilter>());
                         plantToSpawn.transform.SetParent(parent);
@@ -276,7 +270,7 @@ public class ProceduralGenerationWindow : EditorWindow
     {
         float hue, saturation, value;
         UnityEngine.Color.RGBToHSV(color, out hue, out saturation, out value);
-        if (hue >= 100/360f && hue <= 180/360f)
+        if (hue >= 72/360f && hue <= 180/360f)
         {
             if (saturation >= 0.05f && value >= 0.05f)
             {
