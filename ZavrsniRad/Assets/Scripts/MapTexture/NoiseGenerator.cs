@@ -16,7 +16,7 @@ public class NoiseGenerator : MonoBehaviour
 
         float widthCenter = width / 2f;
         float heightCenter = height / 2f;
-        
+
         for (int y = 0; y < height; y++)
         {
             for (int x = 0; x < width; x++)

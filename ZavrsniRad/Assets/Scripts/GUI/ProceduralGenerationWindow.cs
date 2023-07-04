@@ -79,6 +79,8 @@ public class ProceduralGenerationWindow : EditorWindow
     }
 
     #endregion ProceduralHeightMap
+
+    #region SatelliteWindowControll
     private void showSatellite()
     {
         satelliteTexture = textureAlign(satelliteTexture);
@@ -137,36 +139,10 @@ public class ProceduralGenerationWindow : EditorWindow
         maxSpawnHeight = EditorGUILayout.Slider("Maximum spawn height", maxSpawnHeight, 0f, Terrain.activeTerrain.terrainData.size.y);
         maxSteepness = EditorGUILayout.Slider("Maximum steepness angle", maxSteepness, 0f, 60f);
     }
+    #endregion SatelliteWindowControl
+
     #region VegetationGeneration
 
-
-
-    private pixelInfo[,] scanSatelliteImage(Texture2D satelliteTexture)
-    {
-        int satelliteTextureWidth = satelliteTexture.width;
-        int satelliteTextureHeight = satelliteTexture.height;
-        pixelInfo[,] greenPositions = new pixelInfo[satelliteTextureWidth, satelliteTextureHeight];
-
-        int counter = 0;
-        for (int z = 0; z < satelliteTextureHeight; z++)
-        {
-            for (int x = 0; x < satelliteTextureWidth; x++)
-            {
-                UnityEngine.Color pixel = satelliteTexture.GetPixel(x, z);
-                float value = greenColorChecker(pixel);
-                if (value > 0)
-                {
-                    greenPositions[x, z] = new pixelInfo(1, value);
-                    counter++;
-                }
-                else
-                {
-                    greenPositions[x, z] = new pixelInfo(0, value);
-                }
-            }
-        }
-        return greenPositions;
-    }
     private void GenerateVegetation(Terrain terrain, Texture2D spawnTexture, bool useNoiseMap)
     {
         float objectUpOffset = objectToSpawn.gameObject.transform.localScale.y; //pivot point is in the middle - it is calculating distance from pivot point to bottom of an object
@@ -177,77 +153,99 @@ public class ProceduralGenerationWindow : EditorWindow
             childrenMeshFilters = new List<MeshFilter>();
         }
 
+        pixelInfo[,] greenSurface = null;
         if (!useNoiseMap)
         {
-            generateUsingScan(terrain, objectUpOffset, parent, satelliteTexture.width, satelliteTexture.height, useNoiseMap);
+            greenSurface = scanSatelliteImage(satelliteTexture);
         }
 
-        else 
-        {
-            int terrainWidth = (int)terrain.terrainData.size.x;
-            int terrainHeight = (int)terrain.terrainData.size.z;
-
-            for (int z = 0; z < terrainHeight; z++)
-            {
-                for (int x = 0; x < terrainWidth; x++)
-                {
-
-                    float textureValue = spawnTexture.GetPixel(x, z).grayscale;
-
-                    bool spawnSurvive = textureValue >= (1 - surviveFactor);
-
-                    float spawnHeight = terrain.terrainData.GetInterpolatedHeight(x / (float)terrain.terrainData.size.x, z / (float)terrain.terrainData.size.z);
-                    float angle = calculateSteepness(terrain, x, z, maxSteepness, useNoiseMap, null);
-                    if (spawnSurvive && spawnHeight <= maxSpawnHeight && angle <= maxSteepness)
-                    {
-                        for (int i = 1; i <= 20; i++)
-                        {
-                            float spawnX = UnityEngine.Random.Range(x, x + 1f);
-                            float spawnZ = UnityEngine.Random.Range(z, z + 1f);
-                            spawnHeight = terrain.terrainData.GetInterpolatedHeight(spawnX / (float)terrain.terrainData.size.x, spawnZ / (float)terrain.terrainData.size.z) + objectUpOffset;
-                            Vector3 position = new Vector3(spawnX, spawnHeight, spawnZ);
-                            GameObject plantToSpawn = Instantiate(objectToSpawn, position, Quaternion.identity);
-                            childrenMeshFilters.Add(plantToSpawn.GetComponent<MeshFilter>());
-                            plantToSpawn.transform.SetParent(parent);
-                        }
-                    }
-                }
-            }
-        }
-        combineMeshFilters(parent.gameObject); 
-        DestroyImmediate(parent.gameObject);
-        childrenMeshFilters.Clear();
-    }
-    #endregion VegetationGeneration
-
-    private void generateUsingScan(Terrain terrain, float objectUpOffset, Transform parent, float textureWidth, float textureHeight, bool useNoiseMap)
-    {
-        pixelInfo[,] greenSurface = scanSatelliteImage(satelliteTexture);
+        int textureWidth = spawnTexture.width;
+        int textureHeight = spawnTexture.height;
 
         for (int j = 0; j < textureHeight; j++)
         {
             for (int i = 0; i < textureWidth; i++)
             {
-                float greenColorValue = greenSurface[i, j].colorValue;
-                float height = terrain.terrainData.GetInterpolatedHeight(i / textureWidth, j / textureHeight);
 
-                if (greenSurface[i, j].spawnValue == 1 && greenColorValue <= surviveFactor && height <= maxSpawnHeight)
-                    //1 - greenSurface[i, j].colorValue => only most dense will remain (they have smallest hsv value)
+                float[] parametersValues = getParameters(terrain, greenSurface, j, i, spawnTexture);
+
+                float height = parametersValues[0];
+                float pixelColorValue = parametersValues[1];
+                float angle = parametersValues[2];
+
+                bool condition = useNoiseMap ? 
+                    (pixelColorValue >= (1 - surviveFactor) & height <= maxSpawnHeight & angle <= maxSteepness) :
+                    (pixelColorValue <= surviveFactor & height <= maxSpawnHeight & angle <= maxSteepness & greenSurface[i, j].spawnValue == 1);
+            
+                if (condition)
                 {
-                    float angle = calculateSteepness(terrain, i, j, maxSteepness, useNoiseMap, satelliteTexture);
-                    if (angle <= maxSteepness)
-                    {
-                        Vector3 position = new Vector3(i / textureWidth * terrain.terrainData.size.x, height + objectUpOffset, j / textureHeight * terrain.terrainData.size.z);
-                        GameObject plantToSpawn = Instantiate(objectToSpawn, position, Quaternion.identity);
-                        childrenMeshFilters.Add(plantToSpawn.GetComponent<MeshFilter>());
-                        plantToSpawn.transform.SetParent(parent);
-                    }
+                    Vector3 position = new Vector3(i / (float)textureWidth * terrain.terrainData.size.x, height + objectUpOffset, j / (float)textureHeight * terrain.terrainData.size.z);
+                    GameObject plantToSpawn = Instantiate(objectToSpawn, position, Quaternion.identity);
+                    childrenMeshFilters.Add(plantToSpawn.GetComponent<MeshFilter>());
+                    plantToSpawn.transform.SetParent(parent);
                 }
             }
         }
+
+        combineMeshFilters(parent.gameObject); 
+        DestroyImmediate(parent.gameObject);
+        childrenMeshFilters.Clear();
     }
+
+    private pixelInfo[,] scanSatelliteImage(Texture2D satelliteTexture)
+    {
+        int satelliteTextureWidth = satelliteTexture.width;
+        int satelliteTextureHeight = satelliteTexture.height;
+        pixelInfo[,] greenPositions = new pixelInfo[satelliteTextureWidth, satelliteTextureHeight];
+
+        for (int z = 0; z < satelliteTextureHeight; z++)
+        {
+            for (int x = 0; x < satelliteTextureWidth; x++)
+            {
+                UnityEngine.Color pixel = satelliteTexture.GetPixel(x, z);
+                float value = greenColorChecker(pixel);
+                if (value > 0)
+                {
+                    greenPositions[x, z] = new pixelInfo(1, value);
+                }
+                else
+                {
+                    greenPositions[x, z] = new pixelInfo(0, value);
+                }
+            }
+        }
+        return greenPositions;
+    }
+
+    private float greenColorChecker(UnityEngine.Color color)
+    {
+        float hue, saturation, value;
+        UnityEngine.Color.RGBToHSV(color, out hue, out saturation, out value);
+        if (hue >= 72 / 360f && hue <= 180 / 360f)
+        {
+            if (saturation >= 0.05f && value >= 0.05f)
+            {
+                return value;
+            }
+        }
+        return 0;
+    }
+
+    private float[] getParameters(Terrain terrain, pixelInfo[,] greenSurface, int j, int i, Texture2D spawnTexture)
+    {
+        float height = terrain.terrainData.GetInterpolatedHeight(i / (float)spawnTexture.width, j / (float)spawnTexture.height);
+        float pixelColorValue = greenSurface == null ? spawnTexture.GetPixel(i, j).grayscale : greenSurface[i, j].colorValue;
+        float angle = terrain.terrainData.GetSteepness(i / (float)spawnTexture.width, j / (float)spawnTexture.height);
+
+        float[] returnValues = { height, pixelColorValue, angle };
+
+        return returnValues;
+    }
+
+    #endregion VegetationGeneration
     private void combineMeshFilters(GameObject parentObject)
     {
+
         MeshFilter[] meshFilters = parentObject.GetComponentsInChildren<MeshFilter>();
         CombineInstance[] combineInstances = new CombineInstance[meshFilters.Length];
 
@@ -266,29 +264,7 @@ public class ProceduralGenerationWindow : EditorWindow
         meshFilter.mesh = combinedMesh;
         combinedObject.AddComponent<MeshRenderer>().sharedMaterial = objectToSpawn.GetComponent<MeshRenderer>().sharedMaterial;
     }
-    private float greenColorChecker(UnityEngine.Color color)
-    {
-        float hue, saturation, value;
-        UnityEngine.Color.RGBToHSV(color, out hue, out saturation, out value);
-        if (hue >= 72/360f && hue <= 180/360f)
-        {
-            if (saturation >= 0.05f && value >= 0.05f)
-            {
-                return value;
-            }
-        }
-        return 0;
-    }
 
-    private float calculateSteepness(Terrain terrain, int x, int z, float maxSteepness, bool useNoiseMap, Texture2D satelliteTexture)
-    {
-        float xPositionCheck = useNoiseMap == true ? x / terrain.terrainData.size.x : x / (float)satelliteTexture.width;
-        float zPositionCheck = useNoiseMap == true ? z / terrain.terrainData.size.z : z / (float)satelliteTexture.height;
-
-        float angle = terrain.terrainData.GetSteepness(xPositionCheck, zPositionCheck);
-
-        return angle;
-    }
     struct pixelInfo
     {
         public int spawnValue;

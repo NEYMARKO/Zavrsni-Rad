@@ -12,22 +12,26 @@ public class DrawMap : MonoBehaviour
         width = (int) terrain.terrainData.size.x;
         height = (int) terrain.terrainData.size.z;
 
-        Texture2D texture = new Texture2D(width, height);
+        int textureWidth = 1024;
+        int textureHeight = 1024;
+        Texture2D texture = new Texture2D(textureWidth, textureHeight);
 
-        Color[] colors = new Color[width * height]; 
+        Color[] colors = new Color[textureWidth * textureHeight]; 
 
-        for (int y = 0; y < height; y++)
+        for (int y = 0; y < textureHeight; y++)
         {
-            for (int x = 0; x < width; x++)
+            int currentPickHeight = (int ) (y / (float)textureHeight * height);
+            for (int x = 0; x < textureWidth; x++)
             {
-                colors[y * width + x] = Color.Lerp(Color.black, Color.white, noiseMap[y, x]);
+                int currentPickWidth = (int)(x / (float)textureWidth * width);
+                colors[y * 1024 + x] = Color.Lerp(Color.black, Color.white, noiseMap[currentPickHeight, currentPickWidth]);
             }
         }
         texture.SetPixels(colors);
         texture.Apply();
 
         planeTextureRenderer.sharedMaterial.mainTexture = texture;
-        planeTextureRenderer.transform.localScale = new Vector3(width, 1, height);
+        planeTextureRenderer.transform.localScale = new Vector3(textureWidth, 1, textureHeight);
 
         return texture;
     }
